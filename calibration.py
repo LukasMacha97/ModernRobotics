@@ -102,7 +102,7 @@ def a_matrix( kesi, q ):
 
     w=kesi[0:3]
     v=kesi[3:6]
-    bW=np.zeros((6,6))  # change when using ndof
+    bW=np.zeros((6,6))
     bW[0:3,0:3]=mr.VecToso3(w)
     bW[3:6,0:3]=mr.VecToso3(v)
     bW[3:6,3:6]=mr.VecToso3(w)
@@ -111,7 +111,7 @@ def a_matrix( kesi, q ):
     if n==0:
         aM=q*np.eye(6)
     else:
-        a0 = q * np.eye(6)  # change when using different ndof
+        a0 = q * np.eye(6) 
 
         a10 = ( ( 4 - t * np.sin(t) - 4 * np.cos(t) ) / 2 / n**2 )
         a11 = np.dot(a10,bW) 
@@ -171,7 +171,7 @@ def d_exp( kesi, theta ):
     return J
 
 
-def se_3_translation( v,theta ):
+def se3_translation( v,theta ):
 
     T=np.r_[np.c_[np.eye(3),v*theta],np.array([0,0,0,1]).reshape((1,4))]
 
@@ -185,7 +185,7 @@ def rotation_matrix( w,theta ):
     return R
 
 
-def se_3_rotation( w,v,theta ):
+def se3_rotation( w,v,theta ):
 
     R=rotation_matrix(w,theta)
     p = np.dot(theta*np.eye(3)+(1-np.cos(theta))*mr.VecToso3(w)+(theta-np.sin(theta))* np.dot(mr.VecToso3(w),mr.VecToso3(w)),v)
@@ -194,7 +194,7 @@ def se_3_rotation( w,v,theta ):
     return T
         
 
-def se_3_exp( kesi ):
+def se3_exp( kesi ):
 
     n1=np.linalg.norm(kesi[0:3])
     n2=np.linalg.norm(kesi[3:6])
@@ -203,10 +203,10 @@ def se_3_exp( kesi ):
         T=np.eye(4)
 
     elif n1==0:
-        T=se_3_translation(kesi[3:6]/n2,n2)
+        T=se3_translation(kesi[3:6]/n2,n2)
 
     else:
-        T=se_3_rotation(kesi[0:3]/n1,kesi[3:6]/n1,n1)
+        T=se3_rotation(kesi[0:3]/n1,kesi[3:6]/n1,n1)
 
     return T
 
@@ -231,39 +231,36 @@ def traditional_calibration_6dof(xi0, xist0, vtheta, gm, M):
         for i in range(0,N):
 
 
-            gn[:,:,i]= mr.FKinSpace(se_3_exp(xist),xi,vtheta[i,:])
+            gn[:,:,i]= mr.FKinSpace(se3_exp(xist),xi,vtheta[i,:])
             dg[:,:,i] = np.linalg.solve(gn[:,:,i].T, gm[:,:,i].T).T
             v_Log[:,i]= v_log(dg[:,:,i])
 
-        simY = np.zeros((600, 1))
+        simY = np.zeros((N*6, 1))
+        simJ = np.zeros((N*6,42))
 
         for i in range(1, N+1):
 
             simY[6*i - 6: 6*i, 0] = v_Log[:,i-1]
-
-
-        simJ = np.zeros((600,42))
-
-
+        
 
         for k in range(0,N):
 
-            mat1 = se_3_exp( np.dot(vtheta[k,0], xi[:,0]))
+            mat1 = se3_exp( np.dot(vtheta[k,0], xi[:,0]))
             a_mat1 = a_matrix(xi[:,0], vtheta[k,0])
 
-            mat2 = se_3_exp( np.dot(vtheta[k,1], xi[:,1]))
+            mat2 = se3_exp( np.dot(vtheta[k,1], xi[:,1]))
             a_mat2 = a_matrix(xi[:,1], vtheta[k,1])
 
-            mat3 = se_3_exp( np.dot(vtheta[k,2], xi[:,2]))
+            mat3 = se3_exp( np.dot(vtheta[k,2], xi[:,2]))
             a_mat3 = a_matrix(xi[:,2], vtheta[k,2])
 
-            mat4 = se_3_exp( np.dot(vtheta[k,3], xi[:,3]))
+            mat4 = se3_exp( np.dot(vtheta[k,3], xi[:,3]))
             a_mat4 = a_matrix(xi[:,3], vtheta[k,3])
 
-            mat5 = se_3_exp( np.dot(vtheta[k,4], xi[:,4]))
+            mat5 = se3_exp( np.dot(vtheta[k,4], xi[:,4]))
             a_mat5 = a_matrix(xi[:,4], vtheta[k,4])
 
-            mat6 = se_3_exp( np.dot(vtheta[k,5], xi[:,5]))
+            mat6 = se3_exp( np.dot(vtheta[k,5], xi[:,5]))
             a_mat6 = a_matrix(xi[:,5], vtheta[k,5])
 
             a_mat_st = a_matrix_st(xist)
@@ -282,7 +279,7 @@ def traditional_calibration_6dof(xi0, xist0, vtheta, gm, M):
 
         xi[:,0] = (xi[:,0].reshape((6,1))+dp[0:6].reshape((6,1))).reshape((6,))
         xi[0:3,0] = xi[0:3,0] / np.linalg.norm(xi[0:3,0])
-        xi[3:6,0] = xi[3:6,0] + np.dot( np.dot(xi[0:3,1].T, xi[3:6,0]) /  np.dot(xi[0:3,0].T, xi[0:3,0] ), xi[0:3,0])
+        xi[3:6,0] = xi[3:6,0] + np.dot( np.dot(xi[0:3,0].T, xi[3:6,0]) /  np.dot(xi[0:3,0].T, xi[0:3,0] ), xi[0:3,0])
 
         xi[:,1] = (xi[:,1].reshape((6,1)) + dp[6:12].reshape((6,1))).reshape((6,))
         xi[0:3,1] = xi[0:3,1]/np.linalg.norm(xi[0:3,1])
@@ -327,34 +324,34 @@ def traditional_calibration_5dof(xi0, xist0, vtheta, gm, M):
 
         for i in range(0,N):
 
-            gn[:,:,i]= mr.FKinSpace(se_3_exp(xist),xi,vtheta[i,:])
+            gn[:,:,i]= mr.FKinSpace(se3_exp(xist),xi,vtheta[i,:])
             dg[:,:,i] = np.linalg.solve(gn[:,:,i].T, gm[:,:,i].T).T
             v_Log[:,i]= v_log(dg[:,:,i])
 
-        simY = np.zeros((600, 1))
+        simY = np.zeros((N*6, 1))
+        
+        simJ = np.zeros((N*6, 36))
 
         for i in range(1, N+1):
 
             simY[6*i - 6: 6*i, 0] = v_Log[:,i-1]
-
-
-        simJ = np.zeros((600,36))
+        
 
         for k in range(0,N):
 
-            mat1 = se_3_exp( np.dot(vtheta[k,0], xi[:,0]))
+            mat1 = se3_exp( np.dot(vtheta[k,0], xi[:,0]))
             a_mat1 = a_matrix(xi[:,0], vtheta[k,0])
 
-            mat2 = se_3_exp( np.dot(vtheta[k,1], xi[:,1]))
+            mat2 = se3_exp( np.dot(vtheta[k,1], xi[:,1]))
             a_mat2 = a_matrix(xi[:,1], vtheta[k,1])
 
-            mat3 = se_3_exp( np.dot(vtheta[k,2], xi[:,2]))
+            mat3 = se3_exp( np.dot(vtheta[k,2], xi[:,2]))
             a_mat3 = a_matrix(xi[:,2], vtheta[k,2])
 
-            mat4 = se_3_exp( np.dot(vtheta[k,3], xi[:,3]))
+            mat4 = se3_exp( np.dot(vtheta[k,3], xi[:,3]))
             a_mat4 = a_matrix(xi[:,3], vtheta[k,3])
 
-            mat5 = se_3_exp( np.dot(vtheta[k,4], xi[:,4]))
+            mat5 = se3_exp( np.dot(vtheta[k,4], xi[:,4]))
             a_mat5 = a_matrix(xi[:,4], vtheta[k,4])
 
             a_mat_st = a_matrix_st(xist)
@@ -366,13 +363,15 @@ def traditional_calibration_5dof(xi0, xist0, vtheta, gm, M):
             simJ[6*k : 6+6*k, 24:30] = np.dot(mr.Adjoint(np.linalg.multi_dot([mat1, mat2, mat3, mat4])), a_mat5)
             simJ[6*k : 6+6*k, 30:36] = np.dot(mr.Adjoint(np.linalg.multi_dot([mat1, mat2, mat3, mat4, mat5])), a_mat_st)
 
-        dp = np.dot(np.linalg.pinv(simJ),simY)
+        dp = np.dot(np.linalg.pinv(simJ), simY)
 
+        # dp = np.linalg.lstsq(simJ, simY, rcond=None)[0]
+        
         dp = dp.reshape((len(dp),))
 
         xi[:,0] = (xi[:,0].reshape((6,1)) + dp[0:6].reshape((6,1))).reshape((6,))
         xi[0:3,0] = xi[0:3,0] / np.linalg.norm(xi[0:3,0])
-        xi[3:6,0] = xi[3:6,0] + np.dot( np.dot(xi[0:3,1].T, xi[3:6,0]) /  np.dot(xi[0:3,0].T, xi[0:3,0] ), xi[0:3,0])
+        xi[3:6,0] = xi[3:6,0] + np.dot( np.dot(xi[0:3,0].T, xi[3:6,0]) /  np.dot(xi[0:3,0].T, xi[0:3,0] ), xi[0:3,0])
 
         xi[:,1] = (xi[:,1].reshape((6,1)) + dp[6:12].reshape((6,1))).reshape((6,))
         xi[0:3,1] = xi[0:3,1]/np.linalg.norm(xi[0:3,1])
@@ -390,13 +389,96 @@ def traditional_calibration_5dof(xi0, xist0, vtheta, gm, M):
         xi[0:3,4]=xi[0:3,4] / np.linalg.norm(xi[0:3,4])
         xi[3:6,4]= xi[3:6,4] - np.dot(np.dot(xi[0:3,4].T, xi[3:6,4]) / np.dot(xi[0:3,4].T,xi[0:3,4]),xi[0:3,4])
 
-        # xi[:,5]= (xi[:,5].reshape((6,1)) + dp[30:36].reshape((6,1))).reshape((6,))
-        # xi[0:3,5]=xi[0:3,5] / np.linalg.norm(xi[0:3,5])
-        # xi[3:6,5]= xi[3:6,5] - np.dot(np.dot(xi[0:3,5].T, xi[3:6,5]) / np.dot(xi[0:3,5].T,xi[0:3,5]),xi[0:3,5])
-
         xist = xist + dp[30:36]
 
     return xi, xist
+
+
+def traditional_calibration_ndof(xi0, xist0, vtheta, gm, M):
+   
+    xi = np.copy(xi0)
+
+    xist = np.copy(xist0)
+
+    N = np.size(vtheta,0)
+
+    gn = np.zeros((4,4,N))
+    dg = np.zeros((4,4,N))
+    v_Log = np.zeros((6,N))
+
+    ndof = np.size(vtheta, 1)
+
+    for m in range(0,M):
+
+        for i in range(0,N):
+
+
+            gn[:, :, i]= mr.FKinSpace(se3_exp(xist), xi, vtheta[i, :])
+            dg[:, :, i] = np.linalg.solve(gn[:, :, i].T, gm[:, :, i].T).T
+            v_Log[:, i]= v_log(dg[:, :, i])
+
+        simY = np.zeros((N*6, 1))
+        simJ = np.zeros((N*6, ndof*6 + 6))
+
+        for i in range(1, N+1):
+
+            simY[6*i - 6: 6*i, 0] = v_Log[:, i-1]
+
+        for k in range(0, N):
+
+            matn_list = []
+            a_matn_list = []
+
+            a_mat_st = a_matrix_st(xist)
+
+            for n in range(0, ndof):
+
+                matn_list.append(se3_exp(np.dot(vtheta[k,n], xi[:, n])))
+                
+                a_matn_list.append(a_matrix(xi[:,n], vtheta[k, n]))
+
+                if n == 0: 
+
+                    simJ[6*k:6+6*k, 6*n : 6+6*n] = a_matn_list[n]
+
+                if n == 1: 
+
+                    simJ[6*k:6+6*k, 6*n : 6+6*n ] = np.dot(mr.Adjoint(matn_list[n]), a_matn_list[n])
+
+                if n >= 2: 
+
+                    m_dot = np.eye(4)
+
+                    for i in range(0, n):
+
+                        m_dot = np.dot(m_dot, matn_list[i])
+
+                    simJ[6*k:6+6*k, 6*n : 6+6*n ] = np.dot(mr.Adjoint(m_dot), a_matn_list[n])
+
+                if n == ndof:
+
+                    m_dot = np.eye(4)
+
+                    for i in range(0, n):
+
+                        m_dot = np.dot(m_dot, matn_list[i])
+
+                    simJ[6*k:6+6*k, 6*n : 6+6*n ] = np.dot(mr.Adjoint(m_dot), a_mat_st)
+
+        dp = np.dot(np.linalg.pinv(simJ), simY)
+
+        dp = dp.reshape((len(dp),))
+
+        for n in range(0, ndof):
+
+            xi[:,n] = (xi[:, n].reshape((6, 1)) + dp[0:6].reshape((6, 1))).reshape((6,))
+            xi[0:3,n] = xi[0:3, n] / np.linalg.norm(xi[0:3, n])
+            xi[3:6,n] = xi[3:6, n] + np.dot( np.dot(xi[0:3, n].T, xi[3:6, n]) /  np.dot(xi[0:3, n].T, xi[0:3, n] ), xi[0:3, n])
+
+        xist = xist + dp[ndof*6 : ndof*6 + 6]
+
+    return xi, xist
+
 
 
 
@@ -454,13 +536,13 @@ def traditional_calibration_scara(xi0, vtheta, gm, M):
 
             simJ[0+6*k:6+6*k,0:7] = d_exp(xi[:,0], vtheta[k,0])
 
-            simJ[0+6*k:6+6*k,7:14]= np.dot( mr.Adjoint( se_3_exp( np.dot(vtheta[k,0], xi[:,0])) ), d_exp( xi[:,1], vtheta[k,1] ))
+            simJ[0+6*k:6+6*k,7:14]= np.dot( mr.Adjoint( se3_exp( np.dot(vtheta[k,0], xi[:,0])) ), d_exp( xi[:,1], vtheta[k,1] ))
 
-            tempSIMJ= np.dot(mr.Adjoint( np.dot(se_3_exp( np.dot(vtheta[k,0], xi[:,0])), se_3_exp( np.dot(vtheta[k,1], xi[:,1])))), d_exp( xi[:,2], vtheta[k,2]))
+            tempSIMJ= np.dot(mr.Adjoint( np.dot(se3_exp( np.dot(vtheta[k,0], xi[:,0])), se3_exp( np.dot(vtheta[k,1], xi[:,1])))), d_exp( xi[:,2], vtheta[k,2]))
 
             simJ[6*k:6+6*k,14:18] = tempSIMJ[:,3:7]
 
-            simJ[0+6*k:6+6*k,18:25] = np.dot(mr.Adjoint( np.dot(np.dot(se_3_exp( np.dot(vtheta[k,0], xi[:,0]) ), se_3_exp( np.dot( vtheta[k,1], xi[:,1] ) )), se_3_exp( np.dot( vtheta[k,2], xi[:,2] ) )) ),d_exp(xi[:,3],vtheta[k,3]))
+            simJ[0+6*k:6+6*k,18:25] = np.dot(mr.Adjoint( np.dot(np.dot(se3_exp( np.dot(vtheta[k,0], xi[:,0]) ), se3_exp( np.dot( vtheta[k,1], xi[:,1] ) )), se3_exp( np.dot( vtheta[k,2], xi[:,2] ) )) ),d_exp(xi[:,3],vtheta[k,3]))
 
             dp = np.linalg.lstsq(simJ, simY, rcond=None)[0]
 
