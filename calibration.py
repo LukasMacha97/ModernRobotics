@@ -403,21 +403,27 @@ def traditional_calibration_ndof(xi0, xist0, vtheta, gm, M):
     N = np.size(vtheta,0)
 
     gn = np.zeros((4,4,N))
+
     dg = np.zeros((4,4,N))
+    
     v_Log = np.zeros((6,N))
 
     ndof = np.size(vtheta, 1)
 
-    for m in range(0,M):
+    m = 0
+
+    while m < M:
 
         for i in range(0,N):
 
-
             gn[:, :, i]= mr.FKinSpace(se3_exp(xist), xi, vtheta[i, :])
+            
             dg[:, :, i] = np.linalg.solve(gn[:, :, i].T, gm[:, :, i].T).T
+            
             v_Log[:, i]= v_log(dg[:, :, i])
 
         simY = np.zeros((N*6, 1))
+    
         simJ = np.zeros((N*6, ndof*6 + 6))
 
         for i in range(1, N+1):
@@ -427,6 +433,7 @@ def traditional_calibration_ndof(xi0, xist0, vtheta, gm, M):
         for k in range(0, N):
 
             matn_list = []
+    
             a_matn_list = []
 
             a_mat_st = a_matrix_st(xist)
@@ -472,14 +479,16 @@ def traditional_calibration_ndof(xi0, xist0, vtheta, gm, M):
         for n in range(0, ndof):
 
             xi[:,n] = (xi[:, n].reshape((6, 1)) + dp[0:6].reshape((6, 1))).reshape((6,))
+    
             xi[0:3,n] = xi[0:3, n] / np.linalg.norm(xi[0:3, n])
+    
             xi[3:6,n] = xi[3:6, n] + np.dot( np.dot(xi[0:3, n].T, xi[3:6, n]) /  np.dot(xi[0:3, n].T, xi[0:3, n] ), xi[0:3, n])
 
         xist = xist + dp[ndof*6 : ndof*6 + 6]
 
+        m += 1
+
     return xi, xist
-
-
 
 
 def traditional_calibration_scara(xi0, vtheta, gm, M):
