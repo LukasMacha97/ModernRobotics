@@ -31,8 +31,8 @@ def registration(X, Y, Rn=None, tn=None, Ln=None):
 
     idx = np.argsort(S)[::-1]
     S = S[idx]
-    U = U[:,idx]
-    V = V[idx,:].T
+    U = U[:, idx]
+    V = V[idx, :].T
 
 
     R = np.dot(np.dot(V, np.diag([1, 1, np.linalg.det(np.dot(V, U.T))])), U.T)
